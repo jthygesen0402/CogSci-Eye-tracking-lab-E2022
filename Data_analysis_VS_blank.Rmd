@@ -90,6 +90,8 @@ plot(density(pm), main = "Lognormal amplitude", xlim=c(0, 30))
 Saccades  %>% ggplot()+
   aes(x=Amplitude)+
   geom_density()
+
+anova(mGaus, mLog)
 ```
 
 We can confirm these results by simply counting the number of very long saccades in the two conditions. One (very simple) way of operationalize this may be to define a "long" saccade as one that is above 2 SD from the mean, and a "short" saccade as one that is below 2 SD from the mean. You can code "long" as 1 and "short" as 0.
@@ -117,6 +119,19 @@ Generate this variable and use it as outcome variable in a mixed-effects model w
 
 ```{r}
 
+
+SacSum <- Saccades %>% group_by(ParticipantID, Task, Trial) %>% summarise(AmpSum=sum(Amplitude)) 
+
+
+
+m1 <- lmer(AmpSum ~ Task + (1|ParticipantID),
+     data = SacSum)
+m2 <- lmer(AmpSum ~ Task + (1+Trial|ParticipantID),
+     data = SacSum)
+m3 <- lmer(AmpSum ~ Task + (1+Trial*Task|ParticipantID),
+     data = SacSum)
+anova(m1,m2,m3)
+
 ```
 
 ### Hypothesis 2a: Longer fixation duration in Count condition
@@ -127,8 +142,8 @@ Let's start by plotting fixation duration in the two conditions:
 
 ```{r}
 par(mfrow=c(1,2))
-plot(density(Fixations[Fixations$Task == "Search", ]$Duration), main = "Search", xlim = c(0, 1000))
-plot(density(Fixations[Fixations$Task == "Count", ]$Duration), main = "Count", xlim = c(0, 1000))
+plot(density(Fixations[Fixations$Task == "Searching", ]$Duration), main = "Search", xlim = c(0, 1000))
+plot(density(Fixations[Fixations$Task == "Counting", ]$Duration), main = "Count", xlim = c(0, 1000))
 ```
 
 What do the plots seem to show? Do they corroborate our hypothesis?
