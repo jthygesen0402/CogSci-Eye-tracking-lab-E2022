@@ -14,8 +14,8 @@ library(tidyverse)
 
 # Load in the Visual Search experiment data
 ```{r}
-Fixations <- read_csv("./Data/Fixations.csv")
-Saccades <- read_csv("./Data/Saccades.csv")
+Fixations <- read_csv("./Data/Fixed/Fixations.csv")
+Saccades <- read_csv("./Data/Fixed/Saccades.csv")
 ```
 
 # Sanity checks

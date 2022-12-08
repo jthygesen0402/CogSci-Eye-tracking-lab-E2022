@@ -15,7 +15,16 @@ pacman::p_load(tidyverse, jpeg, grid, lme4, lmerTest, DHARMa, MuMIn, effects)
 ## Load the data (skip if already loaded)
 
 ```{r load data}
+Fixations <- read_csv("./Data/Fixed/Fixations.csv")
+Saccades <- read_csv("./Data/Fixed/Saccades.csv")
 
+Saccades <- Saccades %>% 
+  mutate(ParticipantID = as.factor(ParticipantID)) %>% 
+  mutate(Task = as.factor(Task))
+
+Fixations <- Fixations %>% 
+  mutate(ParticipantID = as.factor(ParticipantID)) %>% 
+  mutate(Task = as.factor(Task))
 ```
 
 *Note: Use either the Fixation data set or Saccade data set depending on what is most relevant in each exercise*
@@ -31,7 +40,15 @@ We know from the paper that the amplitude of saccades in the searching task has 
 Let's start by testing this hypothesis graphically. First of all we plot the density distribution of saccade amplitudes separately for the two tasks:
 
 ```{r}
+#Saccade amplitudes for the 2 tasks
+Saccades %>% ggplot(
+  aes(x = Amplitude, color = Task))+
+  geom_density()
 
+Saccades %>% ggplot(
+  aes(x = Amplitude, color = Task))+
+  geom_density()+
+  facet_wrap(~ParticipantID)
 ```
 
 The plot seems to show that searching has a thin head and a long tail, whereas the opposite is true of counting.
@@ -41,6 +58,11 @@ Of course we want to make sure that this pattern holds statistically, and that t
 Start by trying to figure out how the data are distributed in terms of amplitude. Start by looking at mean, median, and minimum-maximum values for the two tasks:
 
 ```{r}
+#visually
+Saccades %>% ggplot(
+  aes(x = Task, y = Amplitude))+
+  geom_boxplot()+
+  stat_summary(fun.y = mean, geom = "point", shape = 4, size =1)
 
 ```
 
@@ -51,9 +73,12 @@ We can start by modeling the data with a Gaussian function, but probably a Logno
 Tip: if the model does not converge / is singular, try doing a stepwise reduction of the random effect structure.
 
 ```{r}
-mGaus <-
+exc_zero_sacc <- Saccades %>% filter(Amplitude != 0)
 
-mLog <-
+mGaus <- glmer(Amplitude ~ Task + (1 + Task|ParticipantID), data = Saccades, family = gaussian)
+
+
+mLog <-  glmer(Amplitude ~ Task + (1 + Task|ParticipantID), data = exc_zero_sacc, family = gaussian(link = log))
   
 summary(mGaus)
 summary(mLog)
@@ -67,7 +92,9 @@ pm <- predict(mLog)
 par(mfrow=c(1,3))
 plot(density(pg), main = "Gaussian amplitude", xlim=c(0, 30))
 plot(density(pm), main = "Lognormal amplitude", xlim=c(0, 30))
-plot(density(Saccades$Amplitude), main = "Observed amplitude")
+Saccades %>% ggplot(
+  aes(x = Amplitude))+
+  geom_density()
 ```
 
 We can confirm these results by simply counting the number of very long saccades in the two conditions. One (very simple) way of operationalize this may be to define a "long" saccade as one that is above 2 SD from the mean, and a "short" saccade as one that is below 2 SD from the mean. You can code "long" as 1 and "short" as 0.
@@ -94,7 +121,28 @@ We can look at total amplitude (= the sum of all individual saccade amplitudes) 
 Generate this variable and use it as outcome variable in a mixed-effects model with task (Count vs Search) as predictor. Identify the most appropriate random effect structure.
 
 ```{r}
+#Total amplitude
+SacSearch <- Saccades %>% filter(Task == "Searching")
+SacCount <- Saccades %>% filter(Task == "Counting")
 
+as.numeric(SacSearch$Amplitude)
+
+oga <- SacSearch %>% group_by(ParticipantID) %>% summarise(sum = sum(SacSearch$Amplitude))
+
+oga
+
+#Trying again
+Saccades2 <- Saccades %>% 
+  group_by(ParticipantID, Task, Trial) %>% 
+  summarise(SumAmp = sum(Amplitude))
+
+m1 <- lmer(SumAmp~Task+(1|ParticipantID), Saccades2)
+m2 <- lmer(SumAmp~Task+(1+Trial|ParticipantID), Saccades2)
+m3 <- lmer(SumAmp~Task+(1+Trial*Task|ParticipantID), Saccades2)
+
+anova(m1, m2, m3)
+
+summary(m1)
 ```
 
 ### Hypothesis 2a: Longer fixation duration in Count condition
@@ -105,8 +153,8 @@ Let's start by plotting fixation duration in the two conditions:
 
 ```{r}
 par(mfrow=c(1,2))
-plot(density(Fixations[Fixations$Task == "Search", ]$Duration), main = "Search", xlim = c(0, 1000))
-plot(density(Fixations[Fixations$Task == "Count", ]$Duration), main = "Count", xlim = c(0, 1000))
+plot(density(Fixations[Fixations$Task == "Searching", ]$Duration), main = "Search", xlim = c(0, 1000))
+plot(density(Fixations[Fixations$Task == "Counting", ]$Duration), main = "Count", xlim = c(0, 1000))
 ```
 
 What do the plots seem to show? Do they corroborate our hypothesis?
