@@ -14,9 +14,8 @@ library(tidyverse)
 
 # Load in the Visual Search experiment data
 ```{r}
-Samples <- 
-Fixations <- 
-Saccades <- 
+Fixations <- read_csv("./Data/Fixations.csv")
+Saccades <- read_csv("./Data/Saccades.csv")
 ```
 
 # Sanity checks
@@ -25,6 +24,21 @@ The first thing we want to do is to run some sanity checks on the sample data (x
 
 ```{r}
 ## Check distribution of raw samples. Is everything alright?
+Fixations %>% 
+  ggplot(aes(x = PositionX))+
+  geom_histogram()
+
+Fixations %>% 
+  ggplot(aes(x = PositionY))+
+  geom_histogram()
+
+Saccades %>% 
+  ggplot(aes(x = StartX))+
+  geom_histogram()
+
+Saccades %>% 
+  ggplot(aes(x = StartY))+
+  geom_histogram()
 
 ```
 
