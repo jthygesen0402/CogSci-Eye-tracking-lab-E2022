@@ -15,24 +15,33 @@ pacman::p_load(tidyverse, jpeg, grid, ggpubr, ggrepel)
 ## Load the data (if it's not already in your Environment)
 
 ```{r load data}
+Fixations <- read_csv("./Data/Fixed/Fixations.csv")
+Saccades <- read_csv("./Data/Fixed/Saccades.csv")
 
+Saccades <- Saccades %>% 
+  mutate(ParticipantID = as.factor(ParticipantID)) %>% 
+  mutate(Task = as.factor(Task))
+
+Fixations <- Fixations %>% 
+  mutate(ParticipantID = as.factor(ParticipantID)) %>% 
+  mutate(Task = as.factor(Task))
 ```
 
 ## Import picture information (ForagingOrder.csv) and merge with data sets
 
 ```{r}
-Pictures <- 
+Pictures <- read.csv("ForagingOrder.csv") 
 Samples <- 
-Fixations <- 
-Saccades <- 
+Fixations <- merge(Pictures, Fixations)
+Saccades <- merge(Pictures, Saccades)
 ```
 
 ## Flip the data on the y-axis since it's mirrored
 
 ```{r}
-Samples <- Samples %>% mutate(PositionY = 1680-PositionY)
-Fixations <- Fixations %>% mutate(PositionY = 1680-PositionY)
-Saccades <- Saccades %>% mutate(PositionY = 1680-PositionY)
+Samples <- Samples %>% mutate(PositionY = 1050-PositionY)
+Fixations <- Fixations %>% mutate(PositionY = 1050-PositionY)
+Saccades <- Saccades %>% mutate(StartY = 1050-StartY)
 ```
 
 Make sure that everything worked as intended.
@@ -79,13 +88,13 @@ One disadvantage of scanpaths is that they are only informative for one particip
 Let's make a scanpath for one trial in the Search condition:
 
 ```{r}
-
+make_scanpath("Emilie1", 2)
 ```
 
 And here is one from the Count condition:
 
 ```{r}
-
+make_scanpath("Emilie1", 7)
 ```
 
 Smukt!
@@ -101,6 +110,9 @@ Make a scanpath for all 10 trials from one participant of your choice (perhaps i
 - Can we spot the trials in which the participant found the star?
 
 ```{r}
+for (i in seq(10)){
+  make_scanpath("Emilie1",i)
+}
 
 ```
 
@@ -133,10 +145,10 @@ make_heatmap <- function(participant, trial){
   
   x <- Fixations[Fixations$ParticipantID == participant & Fixations$Trial == trial,]
   
-  img <- jpeg::readJPEG(paste0('pictures/', x$Stimulus[1])) 
+  img <- jpeg::readJPEG(paste0('stimuli_Foraging/', x$Stimulus[1])) 
   img <- grid::rasterGrob(img, width=unit(1, "npc"), height = unit(1,"npc"), interpolate = FALSE)
   
-  p <- ggplot(Fixations, aes(PositionX, PositionY, color = FixationNo)) + 
+  p <- ggplot(x, aes(PositionX, PositionY, color = FixationNo)) + 
     annotation_custom(img, xmin = 0, xmax = 1680, ymin = 0, ymax = 1050) +
     annotate(geom = "rect", xmin = 0, xmax = 1680, ymin = 0, ymax = 1050, fill = "white", alpha = .3) +
     # instead of plotting circles, we plot a density function, so that areas with different data density levels
@@ -156,13 +168,13 @@ make_heatmap <- function(participant, trial){
 And now we can finally make our heatmap -- pick a participant and a trial:
 
 ```{r}
-
+make_heatmap("Emilie1", 8)
 ```
 
 And one more:
 
 ```{r}
-
+make_heatmap("Emilie1", 4)
 ```
 
 Wonderful!
@@ -172,7 +184,23 @@ Wonderful!
 Borrowing from the heatmap code above and readapting it, make a cumulative heatmap for all participants in the Foraging experiment looking at the ‘penguins.jpg’ image. Facet the graph by condition (Search vs. Count). What do you notice?
 
 ```{r}
-
+  img <- jpeg::readJPEG('stimuli_Foraging/penguins.jpg') 
+  img <- grid::rasterGrob(img, width=unit(1, "npc"), height = unit(1,"npc"), interpolate = FALSE)
+  
+ggplot(Fixations[Fixations$Trial == 8,], aes(PositionX, PositionY, color = FixationNo)) + 
+    annotation_custom(img, xmin = 0, xmax = 1680, ymin = 0, ymax = 1050) +
+    annotate(geom = "rect", xmin = 0, xmax = 1680, ymin = 0, ymax = 1050, fill = "white", alpha = .3) +
+    # instead of plotting circles, we plot a density function, so that areas with different data density levels
+    # have different colors. The sqrt(sqrt()) thing is just to get the ratio of warm/cold colors right
+    stat_density2d(geom = "raster", aes(fill = ..density.., alpha = sqrt(sqrt(..density..))), contour = FALSE, n = 1000) +
+    # we take the density data and apply the colors that we chose
+    scale_fill_gradientn(colours = heat_colors(10), trans="sqrt") +
+    # and apply dynamic alpha to it so that the fewer the fixations, the more transparent the color
+    scale_alpha(range = c(0.1, 0.6)) + xlim(0,1680) + ylim(0,1050) +
+    theme(legend.position = "none") +
+    theme_light()+ 
+    facet_wrap(~SearchOrCount)
+  
 ```
 
 ### Areas of Interest (AOIs)
